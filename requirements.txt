@@ -1,5 +1,5 @@
 tensorflow
-gdown
+gdown>=5.0.0
 streamlit
 numpy
 pandas
