@@ -29,32 +29,32 @@ st.set_page_config(
 LABEL_MAPPING = {0: "Non-Toxic", 1: "Toxic"}
 
 # =========================================
-# DATASET (20 NON-TOXIC & 20 TOXIC)
+# DATASET (Disesuaikan dengan pola Training Model)
 # =========================================
 EXAMPLES = {
     "Non-Toxic": [
-        "That is a very interesting point.", "I appreciate your feedback here.",
-        "Could you please provide a source?", "I agree with the consensus reached.",
-        "Great work on these edits.", "Let's keep the discussion civil.",
-        "The article needs more neutrality.", "Thanks for clarifying the issue.",
-        "This edit is quite constructive.", "That sounds like a fair compromise.",
-        "I am improving the quality.", "Your explanation makes sense.",
-        "I support these proposed changes.", "Good catch on that error.",
-        "This is a well-researched argument.", "I appreciate your patience.",
-        "The tone is perfect.", "Great suggestion for improvement.",
-        "I am happy with this.", "This adds value to discussion."
+        "Thank you for your constructive feedback.", "I agree with the consensus reached here.",
+        "Can you please provide a reliable source?", "The article needs more neutrality in this section.",
+        "Great job on cleaning up the references.", "Let's discuss the changes before editing the page.",
+        "Thanks for clarifying, I understand now.", "This edit follows the guidelines properly.",
+        "That sounds like a fair compromise to me.", "I am trying to improve the quality of this article.",
+        "Your explanation makes perfect sense.", "I support the proposed changes to the lead.",
+        "Good catch on that grammar and spelling error.", "This is a very well-researched argument.",
+        "The tone of the article is neutral.", "That is a great suggestion for the project.",
+        "I am happy with how the article turned out.", "This addition adds value to the discussion.",
+        "Let us look at the evidence objectively.", "Excellent point, I agree with your assessment."
     ],
     "Toxic": [
-        "You are an idiot.", "Stop deleting my edits, vandal.",
-        "Go away, nobody wants you.", "This article is total garbage.",
-        "Shut up, you know nothing.", "I hate your stupid contributions.",
-        "You are a complete waste.", "Get lost, nobody cares.",
-        "You are a pathetic loser.", "Die in a fire.",
-        "Everyone hates your guts.", "This is the worst text.",
-        "You are so stupid.", "Don't ever talk again.",
-        "Total waste of time.", "Go suck a lemon.",
-        "You are brainless and incompetent.", "Nobody likes you here.",
-        "Stop being a douchebag.", "You are a total disgrace."
+        "You are an idiot and should be banned.", "Stop deleting my edits you stupid vandal.",
+        "Go away, nobody wants you here.", "This article is absolute garbage.",
+        "Shut up, you don't know anything about this.", "I hate you and your stupid contributions.",
+        "You are a racist piece of trash.", "Get lost, nobody cares about your opinion.",
+        "You are a pathetic loser with no life.", "Die in a fire, you miserable fool.",
+        "Everyone here hates your guts.", "This is the worst thing I have ever read.",
+        "You are so stupid it actually hurts.", "Don't ever talk to me again, you creep.",
+        "What a complete waste of time you are.", "You are a disgrace to this platform.",
+        "I can't believe how dumb you are.", "You deserve to be blocked permanently.",
+        "Stop acting like a total know-it-all.", "You are a parasite to this community."
     ]
 }
 
@@ -225,6 +225,7 @@ else:
                     st.balloons()
                     st.toast("✅ Komentar aman dan santun", icon="✨")
                 
+                # Menampilkan detail tanpa expander
                 st.markdown("---")
                 st.write(f"**Teks Clean:** `{result['clean']}`")
                 st.progress(result['score'])
