@@ -1,0 +1,44 @@
+{
+  "threshold": 0.6400000000000001,
+  "decision_metric": "f1",
+  "accuracy": 0.9581366068618193,
+  "roc_auc": 0.9731587625645175,
+  "toxic": {
+    "precision": 0.7924876847290641,
+    "recall": 0.7969040247678019,
+    "f1_score": 0.7946897190490892,
+    "support": 1615
+  },
+  "non_toxic": {
+    "precision": 0.9770002103639296,
+    "recall": 0.9763840224246672,
+    "f1_score": 0.9766920192071782,
+    "support": 14270
+  },
+  "macro_avg": {
+    "precision": 0.8847439475464969,
+    "recall": 0.8866440235962345,
+    "f1_score": 0.8856908691281338
+  },
+  "weighted_avg": {
+    "precision": 0.9582411465363999,
+    "recall": 0.9581366068618193,
+    "f1_score": 0.9581881655870765
+  },
+  "confusion_matrix": {
+    "true_negative": 13933,
+    "false_positive": 337,
+    "false_negative": 328,
+    "true_positive": 1287
+  },
+  "dataset": {
+    "total": 158846,
+    "train": 127076,
+    "val": 15885,
+    "test": 15885,
+    "non_toxic_count": 142698,
+    "toxic_count": 16148,
+    "non_toxic_ratio": 0.8983417901615401,
+    "toxic_ratio": 0.1016582098384599
+  }
+}

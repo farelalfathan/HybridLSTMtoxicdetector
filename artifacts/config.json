@@ -1,0 +1,28 @@
+{
+  "artifact_dir": "/content/toxic_comment_artifacts",
+  "train_csv_path": "/content/train.csv",
+  "new_dataset_path": null,
+  "text_col": "comment_text",
+  "label_cols": [
+    "toxic",
+    "severe_toxic",
+    "obscene",
+    "threat",
+    "insult",
+    "identity_hate"
+  ],
+  "single_label_col": null,
+  "max_words": 60000,
+  "max_len": 180,
+  "embedding_dim": 160,
+  "lstm_units": 96,
+  "gru_units": 64,
+  "batch_size": 128,
+  "epochs": 15,
+  "learning_rate": 0.0002,
+  "train_size": 0.8,
+  "validation_size": 0.1,
+  "test_size": 0.1,
+  "resume_training": false,
+  "decision_metric": "f1"
+}
