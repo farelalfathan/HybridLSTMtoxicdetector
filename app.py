@@ -19,7 +19,7 @@ FILE_ID = "1z83SxY2HrK836-G9jM7G9w6f-fOHcMOR"
 ARTIFACT_DIR = Path(__file__).parent / "artifacts"
 
 st.set_page_config(
-    page_title="Toxic Comment Detector",
+    page_title="ClarityNLP - Toxic Comment Detector",
     page_icon="🛡️",
     layout="wide",
 )
@@ -48,7 +48,6 @@ def load_artifacts():
                 st.error(f"Gagal mengunduh model: {e}")
                 st.stop()
 
-        # Validasi file
         if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
             st.error("File model tidak valid. Pastikan link Google Drive bersifat 'Anyone with the link'.")
             st.stop()
@@ -60,7 +59,6 @@ def load_artifacts():
         st.error(f"Artifact berikut belum tersedia: {', '.join(missing)}")
         st.stop()
 
-    # Load Model & Komponen
     model = tf.keras.models.load_model(model_path)
     with open(ARTIFACT_DIR / "tokenizer.json", encoding="utf-8") as f:
         tokenizer = tokenizer_from_json(f.read())
@@ -73,7 +71,6 @@ def load_artifacts():
 
     return model, tokenizer, config, threshold, metrics
 
-# Inisialisasi
 model, tokenizer, config, threshold, metrics = load_artifacts()
 max_len = config.get("max_len", 180)
 
@@ -111,7 +108,7 @@ def predict_comment(text: str):
 # =========================================
 # SIDEBAR
 # =========================================
-st.sidebar.title("🛡️ HybridLSTM-GRU")
+st.sidebar.title("🛡️ ClarityNLP")
 st.sidebar.caption("Deteksi Komentar Toxic")
 page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
 
@@ -174,14 +171,30 @@ if page == "📊 Dashboard":
 # =========================================
 else:
     st.title("Deteksi Komentar Toxic")
+    
+    # Inisialisasi session state untuk quick test
+    if "test_text" not in st.session_state:
+        st.session_state.test_text = ""
+
     col_input, col_result = st.columns([6, 5])
     
     with col_input:
-        text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...")
+        text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...", value=st.session_state.test_text)
         detect = st.button("Deteksi Komentar", type="primary", use_container_width=True)
+        
+        st.markdown("---")
+        st.write("💡 **Quick Test:**")
+        sample_cols = st.columns(2)
+        if sample_cols[0].button("Contoh Non-Toxic"):
+            st.session_state.test_text = "Wah, videonya bermanfaat sekali, terima kasih ya sudah berbagi!"
+            st.rerun()
+        if sample_cols[1].button("Contoh Toxic"):
+            st.session_state.test_text = "Kamu bodoh banget sih, nggak usah bikin konten lagi deh, sampah!"
+            st.rerun()
 
     with col_result:
         st.subheader("Hasil Deteksi")
+        # Jika tombol ditekan, gunakan text_input yang ada
         if detect and text_input:
             result = predict_comment(text_input)
             if result:
