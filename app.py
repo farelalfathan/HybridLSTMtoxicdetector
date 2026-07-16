@@ -29,32 +29,85 @@ st.set_page_config(
 LABEL_MAPPING = {0: "Non-Toxic", 1: "Toxic"}
 
 # =========================================
-# DATASET QUICK TEST
+# DATASET (100 NON-TOXIC & 100 TOXIC)
 # =========================================
 EXAMPLES = {
     "Non-Toxic": [
-        "Thanks for your feedback on my edits.",
-        "I agree with the consensus reached on this talk page.",
-        "Could you please provide a source for this claim?",
-        "I think the article needs more neutrality.",
-        "Great work on cleaning up the references.",
-        "I am just trying to improve the quality of this article.",
-        "Let's discuss the changes before editing the main page.",
-        "Thanks for clarifying, I understand now.",
-        "The edit is constructive and follows Wikipedia guidelines.",
-        "That sounds like a fair compromise."
+        "Thanks for your feedback on my edits.", "I agree with the consensus reached.",
+        "Could you please provide a source for this claim?", "I think the article needs more neutrality.",
+        "Great work on cleaning up the references.", "I am just trying to improve the quality.",
+        "Let's discuss the changes first.", "Thanks for clarifying, I understand now.",
+        "The edit is constructive.", "That sounds like a fair compromise.",
+        "This is a well-researched argument.", "I appreciate your patience.",
+        "The tone is perfect.", "That is a great suggestion.", "I support the changes.",
+        "Good catch on that grammar.", "Very concise and easy to read.",
+        "This adds real value.", "Let's look at the evidence.", "Excellent point.",
+        "Thanks for fixing that error.", "This is exactly what was needed.",
+        "Well written and accurate.", "Good job everyone.", "Let's stick to the facts.",
+        "I’m happy with this outcome.", "This adds value.", "Looks like we agreed.",
+        "Neutral point of view is maintained.", "Constructive criticism is good.",
+        "Well argued point.", "Thanks for the heads up.", "This is a stable version.",
+        "Great contribution.", "This makes a lot of sense.", "Thank you for the guidance.",
+        "This is a balanced perspective.", "I agree with the cited source.",
+        "That is an interesting link.", "Glad to see more activity.",
+        "This is a positive step.", "Thanks for updating.", "I appreciate your honesty.",
+        "Your summary is accurate.", "This helps clarify.", "Follow the procedure.",
+        "Valid concern.", "I see the logic.", "Great job.", "Good summary.",
+        "Thanks for maintaining neutrality.", "Review looks fine.", "Excellent counter-point.",
+        "Let's look at evidence.", "Very detailed.", "I agree, let's proceed.",
+        "Input appreciated.", "Consistent with policy.", "Looks good.",
+        "Support consensus.", "Well reasoned.", "Thanks for clarification.",
+        "Interesting fact.", "Keep up the work.", "Fair assessment.", "Agree with logic.",
+        "Thank you for explanation.", "This is accurate.", "Nice explanation.",
+        "Well structured.", "Thanks for time.", "Support decision.",
+        "Good discussion.", "Works for me.", "Very helpful.", "Great insight.",
+        "Good initiative.", "Well documented.", "Clear explanation.", "I concur.",
+        "Solid argument.", "Useful resource.", "Great formatting.", "Appreciate the help.",
+        "Well noted.", "Good question.", "Fair enough.", "Good link.",
+        "Keep it up.", "Well done.", "Good collaboration.", "Thanks for review.",
+        "Helpful suggestion.", "Good catch.", "Well handled.", "Solid feedback.",
+        "Clear and concise.", "Great teamwork.", "Well said.", "Valid point.",
+        "Good summary.", "Very accurate."
     ],
     "Toxic": [
-        "You are an idiot and should be banned from Wikipedia.",
-        "Stop deleting my edits you stupid vandal.",
-        "Go kill yourself, nobody wants you here.",
-        "This article is total garbage, just like the author.",
-        "Shut up, you don't know anything about this topic.",
-        "I hate you and your stupid contributions.",
-        "You're a racist piece of trash.",
-        "Get lost, nobody cares about your opinion.",
-        "Your mother is a whore.",
-        "Die in a fire, you loser."
+        "You are an idiot and should be banned.", "Stop deleting my edits you stupid vandal.",
+        "Go kill yourself, nobody wants you here.", "This article is total garbage.",
+        "Shut up, you don't know anything.", "I hate you and your contributions.",
+        "You're a racist piece of trash.", "Get lost, nobody cares.",
+        "Your mother is a whore.", "Die in a fire, you loser.", "You are pathetic.",
+        "Everyone hates your guts.", "This is the worst article.", "You are so stupid.",
+        "Don't ever talk to me.", "What a waste of space.", "You are brainless.",
+        "Nobody likes you.", "Shut your mouth.", "Stop being a douchebag.",
+        "You are a disgrace.", "I can't believe how dumb you are.",
+        "You deserve to be banned.", "Complete loser.", "This is a disaster.",
+        "Go jump off a bridge.", "You are annoying.", "Leave now, pathetic clown.",
+        "Your opinion means nothing.", "Stop acting like a know-it-all.",
+        "Absolute waste of time.", "Why are you even allowed to post?",
+        "Everything you say is a lie.", "You are truly disgusting.", "Get a life, weirdo.",
+        "This is pure filth.", "You are clearly too stupid.",
+        "Your existence is an annoyance.", "Shut up, fool.",
+        "Incompetent and useless.", "I loathe you.", "Just give up.",
+        "You are a total jerk.", "Who asked for your input?", "Cancer to this site.",
+        "Stop bothering everyone.", "You are repulsive.", "Get out.",
+        "You are a joke.", "Brain the size of a pea.", "Scum of the earth.",
+        "Waste of oxygen.", "Nobody respects you.", "Shut the fuck up.",
+        "Ugly and stupid.", "Go crawl back.", "Stop spreading lies.", "So fake.",
+        "Manipulative and evil.", "Just disappear.", "Trash.",
+        "Worthless.", "Stop trying to be smart.", "Failing at life.",
+        "Make me sick.", "Parasite.", "Nobody will love you.",
+        "Failure.", "Delusional.", "Stop being arrogant.",
+        "Beneath me.", "Laughing stock.", "Stain on humanity.",
+        "Pathetic and weak.", "Shut your trap.", "Stop wasting time.",
+        "Loser.", "Fraud.", "Embarrassment.",
+        "Go away.", "Toxic.", "Worst person ever.",
+        "Ignorant.", "Loud and annoying.", "Nuisance.",
+        "Parasite to this platform.", "I hate your comments.", "So predictable.",
+        "Stupid idiot.", "Moron.", "Waste of space.", "Shut it.",
+        "You are garbage.", "Absolute trash.", "Total failure.", "Go to hell.",
+        "You are a clown.", "Don't come back.", "Absolutely terrible.",
+        "You are blind.", "You are crazy.", "Go get help.",
+        "You are vile.", "You are a pest.", "Stop existing.",
+        "You are a loser again."
     ]
 }
 
@@ -213,7 +266,7 @@ else:
         st.subheader("Hasil Deteksi")
         if detect and text_input:
             with st.spinner("AI sedang menganalisis..."):
-                time.sleep(0.8) # Efek dramatis loading
+                time.sleep(0.8) 
                 result = predict_comment(text_input)
             
             if result:
@@ -225,10 +278,11 @@ else:
                     st.balloons()
                     st.toast("✅ Komentar aman dan santun", icon="✨")
                 
-                with st.expander("Lihat Detail Analisis"):
-                    st.write(f"**Teks Clean:** `{result['clean']}`")
-                    st.progress(result['score'])
-                    st.write("Skor mendekati 1 artinya semakin tinggi probabilitas toxic.")
+                # Menampilkan detail langsung
+                st.markdown("---")
+                st.write(f"**Teks Clean:** `{result['clean']}`")
+                st.progress(result['score'])
+                st.write("Skor mendekati 1 artinya semakin tinggi probabilitas toxic.")
         
         elif detect and not text_input:
             st.warning("Silakan masukkan teks terlebih dahulu.")
