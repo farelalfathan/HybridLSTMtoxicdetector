@@ -19,7 +19,7 @@ FILE_ID = "1z83SxY2HrK836-G9jM7G9w6f-fOHcMOR"
 ARTIFACT_DIR = Path(__file__).parent / "artifacts"
 
 st.set_page_config(
-    page_title="ClarityNLP - Toxic Comment Detector",
+    page_title="Toxic Comment Detector",
     page_icon="🛡️",
     layout="wide",
 )
