@@ -52,7 +52,7 @@ EXAMPLES = {
         "Shut up, you don't know anything.",
         "I hate you and your stupid contributions.",
         "You are a racist piece of trash.",
-        "Get lost, nobody cares about your opinion.",
+        "You are completely clueless and wasting everyone's time.",
         "You are a pathetic loser.",
         "Die in a fire, you miserable fool."
     ]
