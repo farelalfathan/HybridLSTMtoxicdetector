@@ -3,6 +3,7 @@ import re
 import os
 import gdown
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -71,17 +72,13 @@ def load_artifacts():
             try:
                 gdown.download(url=url, output=str(model_path), quiet=True)
             except Exception as e:
-                st.error(f"Gagal mengunduh model: {e}")
+                st.error(f"Gagal mengunduh: {e}")
                 st.stop()
-
-        if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
-            st.error("File model tidak valid. Pastikan link Google Drive bersifat 'Anyone with the link'.")
-            st.stop()
 
     required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
     missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
     if missing:
-        st.error(f"Artifact berikut belum tersedia: {', '.join(missing)}")
+        st.error(f"Artifact hilang: {', '.join(missing)}")
         st.stop()
 
     model = tf.keras.models.load_model(model_path)
@@ -122,10 +119,8 @@ def predict_comment(text: str):
     score = float(model.predict(padded, verbose=0)[0][0])
     label_code = 1 if score >= threshold else 0
     return {
-        "comment": text,
         "clean": cleaned,
         "score": score,
-        "threshold": threshold,
         "label_code": label_code,
         "label": LABEL_MAPPING[label_code],
     }
@@ -181,25 +176,12 @@ if page == "📊 Dashboard":
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
 
-    st.divider()
-    st.subheader("Confusion Matrix")
-    cm = metrics["confusion_matrix"]
-    cm_df = pd.DataFrame(
-        [[cm["true_negative"], cm["false_positive"]], [cm["false_negative"], cm["true_positive"]]],
-        index=["Aktual Non-Toxic", "Aktual Toxic"],
-        columns=["Prediksi Non-Toxic", "Prediksi Toxic"],
-    )
-    st.dataframe(cm_df, use_container_width=True)
-
 # =========================================
-# HALAMAN 2: DETEKSI KOMENTAR
+# HALAMAN 2: DETEKSI KOMENTAR (INTERAKTIF)
 # =========================================
 else:
     st.title("Deteksi Komentar Toxic")
-    
-    # Inisialisasi session state untuk quick test
-    if "test_text" not in st.session_state:
-        st.session_state.test_text = ""
+    if "test_text" not in st.session_state: st.session_state.test_text = ""
 
     col_input, col_result = st.columns([6, 5])
     
@@ -210,27 +192,33 @@ else:
         st.markdown("---")
         st.write("💡 **Quick Test (Jigsaw Dataset):**")
         sample_cols = st.columns(2)
-        
-        # Tombol dengan Random Choice
-        if sample_cols[0].button("Contoh Non-Toxic"):
+        if sample_cols[0].button("Random Non-Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Non-Toxic"])
             st.rerun()
-            
-        if sample_cols[1].button("Contoh Toxic"):
+        if sample_cols[1].button("Random Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Toxic"])
             st.rerun()
 
     with col_result:
         st.subheader("Hasil Deteksi")
-        # Jika tombol ditekan, gunakan text_input yang ada
         if detect and text_input:
-            result = predict_comment(text_input)
+            with st.spinner("AI sedang menganalisis..."):
+                time.sleep(0.8) # Efek dramatis loading
+                result = predict_comment(text_input)
+            
             if result:
                 if result["label_code"] == 1:
                     st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
+                    st.toast("⚠️ Terdeteksi konten Toxic!", icon="🚨")
                 else:
                     st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
-                st.write("**Detail:**")
-                st.dataframe(pd.DataFrame({"Item": ["Probabilitas", "Teks Clean"], "Nilai": [f"{result['score']:.4f}", result["clean"]]}), use_container_width=True, hide_index=True)
+                    st.balloons()
+                    st.toast("✅ Komentar aman dan santun", icon="✨")
+                
+                with st.expander("Lihat Detail Analisis"):
+                    st.write(f"**Teks Clean:** `{result['clean']}`")
+                    st.progress(result['score'])
+                    st.write("Skor mendekati 1 artinya semakin tinggi probabilitas toxic.")
+        
         elif detect and not text_input:
             st.warning("Silakan masukkan teks terlebih dahulu.")
