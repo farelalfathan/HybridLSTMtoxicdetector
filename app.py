@@ -43,7 +43,6 @@ def load_artifacts():
                     url=url,
                     output=str(model_path),
                     quiet=True,
-                    fuzzy=True
                 )
             except Exception as e:
                 st.error(f"Gagal mengunduh model.\n\n{e}")
