@@ -2,6 +2,7 @@ import json
 import re
 import os
 import gdown
+import random
 from pathlib import Path
 
 import numpy as np
@@ -34,29 +35,19 @@ def load_artifacts():
     ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     model_path = ARTIFACT_DIR / "model.keras"
 
-    # Download otomatis jika model belum ada
     if not model_path.exists():
         url = f"https://drive.google.com/uc?id={FILE_ID}"
-        with st.spinner("📥 Mengunduh model AI (hanya sekali)..."):
+        with st.spinner("📥 Mengunduh model AI..."):
             try:
-                gdown.download(
-                    url=url,
-                    output=str(model_path),
-                    quiet=True,
-                )
+                gdown.download(url=url, output=str(model_path), quiet=True)
             except Exception as e:
-                st.error(f"Gagal mengunduh model: {e}")
+                st.error(f"Gagal mengunduh: {e}")
                 st.stop()
 
-        if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
-            st.error("File model tidak valid. Pastikan link Google Drive bersifat 'Anyone with the link'.")
-            st.stop()
-
-    # Cek file artifact lain
     required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
     missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
     if missing:
-        st.error(f"Artifact berikut belum tersedia: {', '.join(missing)}")
+        st.error(f"Artifact hilang: {', '.join(missing)}")
         st.stop()
 
     model = tf.keras.models.load_model(model_path)
@@ -73,6 +64,36 @@ def load_artifacts():
 
 model, tokenizer, config, threshold, metrics = load_artifacts()
 max_len = config.get("max_len", 180)
+
+# =========================================
+# DATASET QUICK TEST (20 ITEM)
+# =========================================
+EXAMPLES = {
+    "Non-Toxic": [
+        "Thanks for your feedback on my edits.",
+        "I agree with the consensus reached on this talk page.",
+        "Could you please provide a source for this claim?",
+        "I think the article needs more neutrality.",
+        "Great work on cleaning up the references.",
+        "I am just trying to improve the quality of this article.",
+        "Let's discuss the changes before editing the main page.",
+        "Thanks for clarifying, I understand now.",
+        "The edit is constructive and follows Wikipedia guidelines.",
+        "That sounds like a fair compromise."
+    ],
+    "Toxic": [
+        "You are an idiot and should be banned from Wikipedia.",
+        "Stop deleting my edits you stupid vandal.",
+        "Go kill yourself, nobody wants you here.",
+        "This article is total garbage, just like the author.",
+        "Shut up, you don't know anything about this topic.",
+        "I hate you and your stupid contributions.",
+        "You're a racist piece of trash.",
+        "Get lost, nobody cares about your opinion.",
+        "Your mother is a whore.",
+        "Die in a fire, you loser."
+    ]
+}
 
 # =========================================
 # FUNGSI PENDUKUNG
@@ -97,33 +118,19 @@ def predict_comment(text: str):
     score = float(model.predict(padded, verbose=0)[0][0])
     label_code = 1 if score >= threshold else 0
     return {
-        "comment": text,
-        "clean": cleaned,
-        "score": score,
-        "threshold": threshold,
-        "label_code": label_code,
+        "comment": text, "clean": cleaned, "score": score,
+        "threshold": threshold, "label_code": label_code,
         "label": LABEL_MAPPING[label_code],
     }
 
 # =========================================
-# SIDEBAR
-# =========================================
-st.sidebar.title("🛡️ ClarityNLP")
-st.sidebar.caption("Deteksi Komentar Toxic")
-page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
-
-st.sidebar.divider()
-st.sidebar.markdown("**Info Model**")
-st.sidebar.write(f"Threshold: `{threshold:.4f}`")
-st.sidebar.write(f"Metrik: `{metrics.get('decision_metric', '-')}`")
-
-# =========================================
 # HALAMAN 1: DASHBOARD
 # =========================================
+page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
+
 if page == "📊 Dashboard":
     st.title("Dashboard Evaluasi Model")
     ds = metrics["dataset"]
-    
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Data", f"{ds['total']:,}")
     col2.metric("Data Latih", f"{ds['train']:,}")
@@ -132,7 +139,6 @@ if page == "📊 Dashboard":
 
     st.divider()
     left, right = st.columns(2)
-
     with left:
         st.subheader("Distribusi Label Dataset")
         fig, ax = plt.subplots(figsize=(4, 4))
@@ -156,53 +162,32 @@ if page == "📊 Dashboard":
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
 
-    st.divider()
-    st.subheader("Confusion Matrix")
-    cm = metrics["confusion_matrix"]
-    cm_df = pd.DataFrame(
-        [[cm["true_negative"], cm["false_positive"]], [cm["false_negative"], cm["true_positive"]]],
-        index=["Aktual Non-Toxic", "Aktual Toxic"],
-        columns=["Prediksi Non-Toxic", "Prediksi Toxic"],
-    )
-    st.dataframe(cm_df, use_container_width=True)
-
 # =========================================
 # HALAMAN 2: DETEKSI KOMENTAR
 # =========================================
 else:
     st.title("Deteksi Komentar Toxic")
-    
-    # Inisialisasi session state untuk quick test
-    if "test_text" not in st.session_state:
-        st.session_state.test_text = ""
-
+    if "test_text" not in st.session_state: st.session_state.test_text = ""
     col_input, col_result = st.columns([6, 5])
     
     with col_input:
         text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...", value=st.session_state.test_text)
         detect = st.button("Deteksi Komentar", type="primary", use_container_width=True)
-        
         st.markdown("---")
-        st.write("💡 **Quick Test:**")
+        st.write("💡 **Quick Test (Jigsaw Dataset):**")
         sample_cols = st.columns(2)
         if sample_cols[0].button("Contoh Non-Toxic"):
-            st.session_state.test_text = "Wah, videonya bermanfaat sekali, terima kasih ya sudah berbagi!"
+            st.session_state.test_text = random.choice(EXAMPLES["Non-Toxic"])
             st.rerun()
         if sample_cols[1].button("Contoh Toxic"):
-            st.session_state.test_text = "Kamu bodoh banget sih, nggak usah bikin konten lagi deh, sampah!"
+            st.session_state.test_text = random.choice(EXAMPLES["Toxic"])
             st.rerun()
 
     with col_result:
         st.subheader("Hasil Deteksi")
-        # Jika tombol ditekan, gunakan text_input yang ada
         if detect and text_input:
             result = predict_comment(text_input)
             if result:
-                if result["label_code"] == 1:
-                    st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
-                else:
-                    st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
-                st.write("**Detail:**")
+                if result["label_code"] == 1: st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
+                else: st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
                 st.dataframe(pd.DataFrame({"Item": ["Probabilitas", "Teks Clean"], "Nilai": [f"{result['score']:.4f}", result["clean"]]}), use_container_width=True, hide_index=True)
-        elif detect and not text_input:
-            st.warning("Silakan masukkan teks terlebih dahulu.")
