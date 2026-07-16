@@ -192,10 +192,10 @@ else:
         st.markdown("---")
         st.write("💡 **Quick Test (Jigsaw Dataset):**")
         sample_cols = st.columns(2)
-        if sample_cols[0].button("Random Non-Toxic"):
+        if sample_cols[0].button("Non-Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Non-Toxic"])
             st.rerun()
-        if sample_cols[1].button("Random Toxic"):
+        if sample_cols[1].button("Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Toxic"])
             st.rerun()
 
