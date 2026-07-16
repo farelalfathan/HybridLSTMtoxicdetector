@@ -128,7 +128,7 @@ def predict_comment(text: str):
 # =========================================
 # SIDEBAR
 # =========================================
-st.sidebar.title("🛡️ ClarityNLP")
+st.sidebar.title("🛡️ Hybrid LSTM-GRU")
 st.sidebar.caption("Deteksi Komentar Toxic")
 page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
 
