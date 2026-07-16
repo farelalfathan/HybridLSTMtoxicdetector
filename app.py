@@ -28,44 +28,6 @@ st.set_page_config(
 LABEL_MAPPING = {0: "Non-Toxic", 1: "Toxic"}
 
 # =========================================
-# LOAD ARTIFACTS
-# =========================================
-@st.cache_resource(show_spinner="Memuat model Hybrid LSTM-GRU...")
-def load_artifacts():
-    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-    model_path = ARTIFACT_DIR / "model.keras"
-
-    if not model_path.exists():
-        url = f"https://drive.google.com/uc?id={FILE_ID}"
-        with st.spinner("📥 Mengunduh model AI..."):
-            try:
-                gdown.download(url=url, output=str(model_path), quiet=True)
-            except Exception as e:
-                st.error(f"Gagal mengunduh: {e}")
-                st.stop()
-
-    required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
-    missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
-    if missing:
-        st.error(f"Artifact hilang: {', '.join(missing)}")
-        st.stop()
-
-    model = tf.keras.models.load_model(model_path)
-    with open(ARTIFACT_DIR / "tokenizer.json", encoding="utf-8") as f:
-        tokenizer = tokenizer_from_json(f.read())
-    with open(ARTIFACT_DIR / "config.json", encoding="utf-8") as f:
-        config = json.load(f)
-    with open(ARTIFACT_DIR / "threshold.json", encoding="utf-8") as f:
-        threshold = float(json.load(f)["threshold"])
-    with open(ARTIFACT_DIR / "metrics.json", encoding="utf-8") as f:
-        metrics = json.load(f)
-
-    return model, tokenizer, config, threshold, metrics
-
-model, tokenizer, config, threshold, metrics = load_artifacts()
-max_len = config.get("max_len", 180)
-
-# =========================================
 # DATASET QUICK TEST (20 ITEM)
 # =========================================
 EXAMPLES = {
@@ -96,6 +58,48 @@ EXAMPLES = {
 }
 
 # =========================================
+# LOAD ARTIFACTS
+# =========================================
+@st.cache_resource(show_spinner="Memuat model Hybrid LSTM-GRU...")
+def load_artifacts():
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    model_path = ARTIFACT_DIR / "model.keras"
+
+    if not model_path.exists():
+        url = f"https://drive.google.com/uc?id={FILE_ID}"
+        with st.spinner("📥 Mengunduh model AI (hanya sekali)..."):
+            try:
+                gdown.download(url=url, output=str(model_path), quiet=True)
+            except Exception as e:
+                st.error(f"Gagal mengunduh model: {e}")
+                st.stop()
+
+        if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
+            st.error("File model tidak valid. Pastikan link Google Drive bersifat 'Anyone with the link'.")
+            st.stop()
+
+    required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
+    missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
+    if missing:
+        st.error(f"Artifact berikut belum tersedia: {', '.join(missing)}")
+        st.stop()
+
+    model = tf.keras.models.load_model(model_path)
+    with open(ARTIFACT_DIR / "tokenizer.json", encoding="utf-8") as f:
+        tokenizer = tokenizer_from_json(f.read())
+    with open(ARTIFACT_DIR / "config.json", encoding="utf-8") as f:
+        config = json.load(f)
+    with open(ARTIFACT_DIR / "threshold.json", encoding="utf-8") as f:
+        threshold = float(json.load(f)["threshold"])
+    with open(ARTIFACT_DIR / "metrics.json", encoding="utf-8") as f:
+        metrics = json.load(f)
+
+    return model, tokenizer, config, threshold, metrics
+
+model, tokenizer, config, threshold, metrics = load_artifacts()
+max_len = config.get("max_len", 180)
+
+# =========================================
 # FUNGSI PENDUKUNG
 # =========================================
 def clean_text(text: str) -> str:
@@ -118,19 +122,33 @@ def predict_comment(text: str):
     score = float(model.predict(padded, verbose=0)[0][0])
     label_code = 1 if score >= threshold else 0
     return {
-        "comment": text, "clean": cleaned, "score": score,
-        "threshold": threshold, "label_code": label_code,
+        "comment": text,
+        "clean": cleaned,
+        "score": score,
+        "threshold": threshold,
+        "label_code": label_code,
         "label": LABEL_MAPPING[label_code],
     }
 
 # =========================================
-# HALAMAN 1: DASHBOARD
+# SIDEBAR
 # =========================================
+st.sidebar.title("🛡️ ClarityNLP")
+st.sidebar.caption("Deteksi Komentar Toxic")
 page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
 
+st.sidebar.divider()
+st.sidebar.markdown("**Info Model**")
+st.sidebar.write(f"Threshold: `{threshold:.4f}`")
+st.sidebar.write(f"Metrik: `{metrics.get('decision_metric', '-')}`")
+
+# =========================================
+# HALAMAN 1: DASHBOARD
+# =========================================
 if page == "📊 Dashboard":
     st.title("Dashboard Evaluasi Model")
     ds = metrics["dataset"]
+    
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Data", f"{ds['total']:,}")
     col2.metric("Data Latih", f"{ds['train']:,}")
@@ -139,6 +157,7 @@ if page == "📊 Dashboard":
 
     st.divider()
     left, right = st.columns(2)
+
     with left:
         st.subheader("Distribusi Label Dataset")
         fig, ax = plt.subplots(figsize=(4, 4))
@@ -162,32 +181,56 @@ if page == "📊 Dashboard":
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
 
+    st.divider()
+    st.subheader("Confusion Matrix")
+    cm = metrics["confusion_matrix"]
+    cm_df = pd.DataFrame(
+        [[cm["true_negative"], cm["false_positive"]], [cm["false_negative"], cm["true_positive"]]],
+        index=["Aktual Non-Toxic", "Aktual Toxic"],
+        columns=["Prediksi Non-Toxic", "Prediksi Toxic"],
+    )
+    st.dataframe(cm_df, use_container_width=True)
+
 # =========================================
 # HALAMAN 2: DETEKSI KOMENTAR
 # =========================================
 else:
     st.title("Deteksi Komentar Toxic")
-    if "test_text" not in st.session_state: st.session_state.test_text = ""
+    
+    # Inisialisasi session state untuk quick test
+    if "test_text" not in st.session_state:
+        st.session_state.test_text = ""
+
     col_input, col_result = st.columns([6, 5])
     
     with col_input:
         text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...", value=st.session_state.test_text)
         detect = st.button("Deteksi Komentar", type="primary", use_container_width=True)
+        
         st.markdown("---")
         st.write("💡 **Quick Test (Jigsaw Dataset):**")
         sample_cols = st.columns(2)
+        
+        # Tombol dengan Random Choice
         if sample_cols[0].button("Contoh Non-Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Non-Toxic"])
             st.rerun()
+            
         if sample_cols[1].button("Contoh Toxic"):
             st.session_state.test_text = random.choice(EXAMPLES["Toxic"])
             st.rerun()
 
     with col_result:
         st.subheader("Hasil Deteksi")
+        # Jika tombol ditekan, gunakan text_input yang ada
         if detect and text_input:
             result = predict_comment(text_input)
             if result:
-                if result["label_code"] == 1: st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
-                else: st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
+                if result["label_code"] == 1:
+                    st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
+                else:
+                    st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
+                st.write("**Detail:**")
                 st.dataframe(pd.DataFrame({"Item": ["Probabilitas", "Teks Clean"], "Nilai": [f"{result['score']:.4f}", result["clean"]]}), use_container_width=True, hide_index=True)
+        elif detect and not text_input:
+            st.warning("Silakan masukkan teks terlebih dahulu.")
