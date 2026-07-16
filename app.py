@@ -15,7 +15,6 @@ from tensorflow.keras.preprocessing.text import tokenizer_from_json
 # =========================================
 # KONFIGURASI
 # =========================================
-# ID File Google Drive untuk model.keras
 FILE_ID = "1z83SxY2HrK836-G9jM7G9w6f-fOHcMOR"
 ARTIFACT_DIR = Path(__file__).parent / "artifacts"
 
@@ -28,61 +27,71 @@ st.set_page_config(
 LABEL_MAPPING = {0: "Non-Toxic", 1: "Toxic"}
 
 # =========================================
-# LOAD ARTIFACTS
+# LOAD ARTIFACTS (VERSI BARU)
 # =========================================
 @st.cache_resource(show_spinner="Memuat model Hybrid LSTM-GRU...")
 def load_artifacts():
-    # 1. Pastikan folder artifacts ada
-    if not ARTIFACT_DIR.exists():
-        ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
-
-    # 2. Logika Download Otomatis untuk model.keras
+    ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
     model_path = ARTIFACT_DIR / "model.keras"
+
+    # Download otomatis jika model belum ada
     if not model_path.exists():
-        st.info("File `model.keras` tidak ditemukan. Mendownload dari Google Drive...")
-        try:
-            gdown.download(id=FILE_ID, output=str(model_path), quiet=False)
-            st.success("Download model selesai!")
-        except Exception as e:
-            st.error(f"Gagal mendownload model: {e}")
+        url = f"https://drive.google.com/uc?id={FILE_ID}"
+        with st.spinner("📥 Mengunduh model AI (hanya sekali)..."):
+            try:
+                gdown.download(
+                    url=url,
+                    output=str(model_path),
+                    quiet=True,
+                    fuzzy=True
+                )
+            except Exception as e:
+                st.error(f"Gagal mengunduh model.\n\n{e}")
+                st.stop()
+
+        # Validasi hasil download
+        if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
+            st.error(
+                """
+                Model berhasil di-request tetapi file yang diterima tidak valid.
+                Pastikan:
+                • Link Google Drive bersifat **Anyone with the link**
+                • Permission = Viewer
+                • FILE_ID benar
+                """
+            )
             st.stop()
 
-    # 3. Cek file pendukung lainnya
+    # Cek file artifact lain
     required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
     missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
     if missing:
-        st.error(
-            "File artifact berikut tidak ditemukan di folder `artifacts/`: "
-            + ", ".join(missing)
-            + ".\n\nPastikan semua file ini ada di folder `artifacts/`."
-        )
+        st.error("Artifact berikut belum tersedia:\n\n" + "\n".join(missing))
         st.stop()
 
-    model = tf.keras.models.load_model(ARTIFACT_DIR / "model.keras")
+    # Load Model & Komponen
+    model = tf.keras.models.load_model(model_path)
 
-    with open(ARTIFACT_DIR / "tokenizer.json", "r", encoding="utf-8") as f:
+    with open(ARTIFACT_DIR / "tokenizer.json", encoding="utf-8") as f:
         tokenizer = tokenizer_from_json(f.read())
-
-    with open(ARTIFACT_DIR / "config.json", "r", encoding="utf-8") as f:
+    with open(ARTIFACT_DIR / "config.json", encoding="utf-8") as f:
         config = json.load(f)
-
-    with open(ARTIFACT_DIR / "threshold.json", "r", encoding="utf-8") as f:
-        threshold = json.load(f)["threshold"]
-
-    with open(ARTIFACT_DIR / "metrics.json", "r", encoding="utf-8") as f:
+    with open(ARTIFACT_DIR / "threshold.json", encoding="utf-8") as f:
+        threshold = float(json.load(f)["threshold"])
+    with open(ARTIFACT_DIR / "metrics.json", encoding="utf-8") as f:
         metrics = json.load(f)
 
-    return model, tokenizer, config, float(threshold), metrics
+    return model, tokenizer, config, threshold, metrics
 
+# Jalankan fungsi load
 model, tokenizer, config, threshold, metrics = load_artifacts()
 max_len = config.get("max_len", 180)
 
 # =========================================
-# CLEAN TEXT
+# FUNGSI PENDUKUNG
 # =========================================
 def clean_text(text: str) -> str:
-    if text is None:
-        return ""
+    if text is None: return ""
     text = str(text).lower()
     text = re.sub(r"http\S+|www\.\S+", " URL ", text)
     text = re.sub(r"@\w+", " USER ", text)
@@ -94,8 +103,7 @@ def clean_text(text: str) -> str:
     return text
 
 def predict_comment(text: str):
-    if not text or not text.strip():
-        return None
+    if not text or not text.strip(): return None
     cleaned = clean_text(text)
     seq = tokenizer.texts_to_sequences([cleaned])
     padded = pad_sequences(seq, maxlen=max_len, padding="post", truncating="post")
@@ -138,7 +146,6 @@ if page == "📊 Dashboard":
 
     st.divider()
     left, right = st.columns(2)
-
     with left:
         st.subheader("Distribusi Label Dataset")
         fig, ax = plt.subplots(figsize=(5, 4))
@@ -146,23 +153,15 @@ if page == "📊 Dashboard":
         labels = [f"Non-Toxic\n({ds['non_toxic_ratio']:.1%})", f"Toxic\n({ds['toxic_ratio']:.1%})"]
         ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90,
                colors=["#2563eb", "#f97316"], textprops={"fontsize": 10, "fontweight": "bold"})
-        ax.axis("equal")
         st.pyplot(fig)
 
     with right:
         st.subheader("Performa Model (Data Uji)")
         fig, ax = plt.subplots(figsize=(5, 4))
         metric_names = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC AUC"]
-        metric_values = [
-            metrics["accuracy"],
-            metrics["toxic"]["precision"],
-            metrics["toxic"]["recall"],
-            metrics["toxic"]["f1_score"],
-            metrics["roc_auc"],
-        ]
+        metric_values = [metrics["accuracy"], metrics["toxic"]["precision"], metrics["toxic"]["recall"], metrics["toxic"]["f1_score"], metrics["roc_auc"]]
         bars = ax.bar(metric_names, metric_values, color=["#2563eb", "#16a34a", "#f97316", "#9333ea", "#e11d48"])
         ax.set_ylim(0, 1)
-        ax.grid(axis="y", linestyle="--", alpha=0.35)
         for bar, v in zip(bars, metric_values):
             ax.text(bar.get_x() + bar.get_width() / 2, v + 0.02, f"{v:.3f}", ha="center", fontweight="bold", fontsize=9)
         st.pyplot(fig)
@@ -183,17 +182,14 @@ if page == "📊 Dashboard":
 else:
     st.title("Deteksi Komentar Toxic")
     col_input, col_result = st.columns([6, 5])
-
     with col_input:
         text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...")
         detect = st.button("Deteksi Komentar", type="primary", use_container_width=True)
 
     with col_result:
         st.subheader("Hasil Deteksi")
-        final_text = text_input if detect else None
-
-        if final_text:
-            result = predict_comment(final_text)
+        if detect and text_input:
+            result = predict_comment(text_input)
             if result:
                 if result["label_code"] == 1:
                     st.error(f"🔴 **Toxic** (skor: {result['score']:.4f})")
@@ -201,5 +197,5 @@ else:
                     st.success(f"🟢 **Non-Toxic** (skor: {result['score']:.4f})")
                 st.write("**Detail:**")
                 st.dataframe(pd.DataFrame({"Item": ["Probabilitas", "Teks Clean"], "Nilai": [f"{result['score']:.4f}", result["clean"]]}), use_container_width=True, hide_index=True)
-        else:
-            st.info("Masukkan komentar lalu klik Deteksi.")
+        elif detect and not text_input:
+            st.warning("Silakan masukkan teks terlebih dahulu.")
