@@ -27,7 +27,7 @@ st.set_page_config(
 LABEL_MAPPING = {0: "Non-Toxic", 1: "Toxic"}
 
 # =========================================
-# LOAD ARTIFACTS (VERSI BARU)
+# LOAD ARTIFACTS
 # =========================================
 @st.cache_resource(show_spinner="Memuat model Hybrid LSTM-GRU...")
 def load_artifacts():
@@ -45,32 +45,23 @@ def load_artifacts():
                     quiet=True,
                 )
             except Exception as e:
-                st.error(f"Gagal mengunduh model.\n\n{e}")
+                st.error(f"Gagal mengunduh model: {e}")
                 st.stop()
 
-        # Validasi hasil download
+        # Validasi file
         if (not model_path.exists()) or os.path.getsize(model_path) < 1024:
-            st.error(
-                """
-                Model berhasil di-request tetapi file yang diterima tidak valid.
-                Pastikan:
-                • Link Google Drive bersifat **Anyone with the link**
-                • Permission = Viewer
-                • FILE_ID benar
-                """
-            )
+            st.error("File model tidak valid. Pastikan link Google Drive bersifat 'Anyone with the link'.")
             st.stop()
 
     # Cek file artifact lain
     required = ["model.keras", "tokenizer.json", "config.json", "threshold.json", "metrics.json"]
     missing = [f for f in required if not (ARTIFACT_DIR / f).exists()]
     if missing:
-        st.error("Artifact berikut belum tersedia:\n\n" + "\n".join(missing))
+        st.error(f"Artifact berikut belum tersedia: {', '.join(missing)}")
         st.stop()
 
     # Load Model & Komponen
     model = tf.keras.models.load_model(model_path)
-
     with open(ARTIFACT_DIR / "tokenizer.json", encoding="utf-8") as f:
         tokenizer = tokenizer_from_json(f.read())
     with open(ARTIFACT_DIR / "config.json", encoding="utf-8") as f:
@@ -82,7 +73,7 @@ def load_artifacts():
 
     return model, tokenizer, config, threshold, metrics
 
-# Jalankan fungsi load
+# Inisialisasi
 model, tokenizer, config, threshold, metrics = load_artifacts()
 max_len = config.get("max_len", 180)
 
@@ -90,7 +81,7 @@ max_len = config.get("max_len", 180)
 # FUNGSI PENDUKUNG
 # =========================================
 def clean_text(text: str) -> str:
-    if text is None: return ""
+    if not text: return ""
     text = str(text).lower()
     text = re.sub(r"http\S+|www\.\S+", " URL ", text)
     text = re.sub(r"@\w+", " USER ", text)
@@ -121,22 +112,21 @@ def predict_comment(text: str):
 # SIDEBAR
 # =========================================
 st.sidebar.title("🛡️ ClarityNLP")
-st.sidebar.caption("Deteksi Komentar Toxic berbasis Hybrid LSTM-GRU")
+st.sidebar.caption("Deteksi Komentar Toxic")
 page = st.sidebar.radio("Menu", ["📊 Dashboard", "🔍 Deteksi Komentar"])
 
 st.sidebar.divider()
 st.sidebar.markdown("**Info Model**")
 st.sidebar.write(f"Threshold: `{threshold:.4f}`")
-st.sidebar.write(f"Metrik seleksi: `{metrics.get('decision_metric', '-')}`")
+st.sidebar.write(f"Metrik: `{metrics.get('decision_metric', '-')}`")
 
 # =========================================
 # HALAMAN 1: DASHBOARD
 # =========================================
 if page == "📊 Dashboard":
     st.title("Dashboard Evaluasi Model")
-    st.caption("Data diambil langsung dari `metrics.json`.")
-
     ds = metrics["dataset"]
+    
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Data", f"{ds['total']:,}")
     col2.metric("Data Latih", f"{ds['train']:,}")
@@ -145,25 +135,29 @@ if page == "📊 Dashboard":
 
     st.divider()
     left, right = st.columns(2)
+
     with left:
         st.subheader("Distribusi Label Dataset")
-        fig, ax = plt.subplots(figsize=(5, 4))
+        fig, ax = plt.subplots(figsize=(4, 4))
         values = [ds["non_toxic_count"], ds["toxic_count"]]
         labels = [f"Non-Toxic\n({ds['non_toxic_ratio']:.1%})", f"Toxic\n({ds['toxic_ratio']:.1%})"]
         ax.pie(values, labels=labels, autopct="%1.1f%%", startangle=90,
                colors=["#2563eb", "#f97316"], textprops={"fontsize": 10, "fontweight": "bold"})
-        st.pyplot(fig)
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
 
     with right:
         st.subheader("Performa Model (Data Uji)")
-        fig, ax = plt.subplots(figsize=(5, 4))
+        fig, ax = plt.subplots(figsize=(6, 4))
         metric_names = ["Accuracy", "Precision", "Recall", "F1-Score", "ROC AUC"]
         metric_values = [metrics["accuracy"], metrics["toxic"]["precision"], metrics["toxic"]["recall"], metrics["toxic"]["f1_score"], metrics["roc_auc"]]
         bars = ax.bar(metric_names, metric_values, color=["#2563eb", "#16a34a", "#f97316", "#9333ea", "#e11d48"])
         ax.set_ylim(0, 1)
+        ax.grid(axis="y", linestyle="--", alpha=0.35)
         for bar, v in zip(bars, metric_values):
             ax.text(bar.get_x() + bar.get_width() / 2, v + 0.02, f"{v:.3f}", ha="center", fontweight="bold", fontsize=9)
-        st.pyplot(fig)
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
 
     st.divider()
     st.subheader("Confusion Matrix")
@@ -181,6 +175,7 @@ if page == "📊 Dashboard":
 else:
     st.title("Deteksi Komentar Toxic")
     col_input, col_result = st.columns([6, 5])
+    
     with col_input:
         text_input = st.text_area("Masukkan komentar", height=180, placeholder="Tulis komentar...")
         detect = st.button("Deteksi Komentar", type="primary", use_container_width=True)
